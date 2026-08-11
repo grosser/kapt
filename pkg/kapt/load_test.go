@@ -134,6 +134,34 @@ items:
 		})
 	})
 
+	It("mixes plain resources and multiple lists", func() {
+		content := job("plain", "apps") + `
+---
+apiVersion: v1
+kind: List
+items:
+- {apiVersion: batch/v1, kind: Job, metadata: {name: a}}
+---
+apiVersion: v1
+kind: JobList
+items:
+- {apiVersion: batch/v1, kind: Job, metadata: {name: b}}
+---
+apiVersion: v1
+kind: List
+items: []
+` + job("plain-2", "apps")
+		withFile("resources.yaml", content, func(path string) {
+			resources, err := LoadResources(path)
+			Expect(err).ToNot(HaveOccurred())
+			names := []string{}
+			for _, resource := range resources {
+				names = append(names, resource.GetName())
+			}
+			Expect(names).To(Equal([]string{"plain", "a", "b", "plain-2"}))
+		})
+	})
+
 	It("fails without resources", func() {
 		withFile("resources.yaml", "# nothing here\n", func(path string) {
 			_, err := LoadResources(path)
