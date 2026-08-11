@@ -47,10 +47,6 @@ func (p *Policy) match(resource *Resource) (matched bool, reason string) {
 	if matched, reason = p.matcher.match(resource, p.namespaces); !matched {
 		return false, reason
 	}
-	if len(p.bindingMatchers) == 0 {
-		return true, ""
-	}
-
 	for _, binding := range p.bindingMatchers {
 		if matched, reason = binding.match(resource, p.namespaces); matched {
 			return true, ""

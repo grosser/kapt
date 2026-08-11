@@ -13,8 +13,15 @@ var _ = Describe("LoadPolicy", func() {
 		Expect(policy.Bindings).To(HaveLen(1))
 	})
 
+	It("fails without a binding", func() {
+		withFile("policy.yaml", barePolicy("  validations: [{expression: 'true'}]"), func(path string) {
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring("found no ValidatingAdmissionPolicyBinding for test.example.com")))
+		})
+	})
+
 	It("ignores bindings of other policies", func() {
-		content := policyWith("  validations: [{expression: 'true'}]") + `
+		content := barePolicy("  validations: [{expression: 'true'}]") + `
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -22,9 +29,8 @@ metadata: {name: other}
 spec: {policyName: other.example.com}
 `
 		withFile("policy.yaml", content, func(path string) {
-			policy, err := LoadPolicy(path)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(policy.Bindings).To(BeEmpty())
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring("found no ValidatingAdmissionPolicyBinding")))
 		})
 	})
 

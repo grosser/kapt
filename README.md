@@ -1,6 +1,6 @@
 # kapt [![Test](https://github.com/grosser/kapt/actions/workflows/test.yml/badge.svg)](https://github.com/grosser/kapt/actions?query=branch%3Amaster) [![coverage](https://img.shields.io/badge/coverage-100%25-success.svg)](https://github.com/grosser/kapt)
 
-Kubernetes Admission Policy Tester: validate resources against a local `ValidatingAdmissionPolicy`
+**K**ubernetes **A**dmission **P**olicy **T**ester: validate resources against a local `ValidatingAdmissionPolicy` or `MutatingAdmissionPolicy` (TODO)
 
 - 🎉 **Instant** feedback on policy changes, no cluster and no `envtest` needed
 - 🚀 Uses the **apiservers own** CEL compilation and validation code, so results match production
@@ -22,20 +22,21 @@ Exit status: `0` = nothing denied, `1` = at least one denied, `2` = error (bad i
 ## Usage
 
 ```
-Usage: kapt [options] <policy.yaml> <resource.yaml>...
+Usage: kapt [options] <policy.yaml> <resources.yaml>...
 
 Options:
   -groups string
     	comma separated request.userInfo.groups (default "system:masters,system:authenticated")
   -inventory string
-    	file with Namespace resources (for namespaceSelector and namespaceObject)
+    	file with Namespaces (for namespaceSelector and namespaceObject)
   -json
     	print results as a json array
   -user string
     	request.userInfo.username (default "kapt")
 ```
 
-- The policy file holds a `ValidatingAdmissionPolicy` and optionally its `ValidatingAdmissionPolicyBinding`s
+- The policy file must hold a `ValidatingAdmissionPolicy` and its `ValidatingAdmissionPolicyBinding`s,
+  since a policy without a binding is ignored by the apiserver
 - Resource files can hold multiple documents and `List`s, `-` reads stdin
 - Resources the policy does not select are reported as `SKIPPED` with the reason
   (`resourceRules`, `objectSelector`, `namespaceSelector`, `matchConditions`, ...)
@@ -70,6 +71,13 @@ Or use it as a go library, see [pkg/kapt](pkg/kapt) for `LoadPolicy`, `LoadResou
 - A missing namespace defaults to `default`, like the apiserver does
 - Colors are used when stdout is a terminal, disable with `--no-color`
 - `kapt version` to see the current version
+
+## TODO
+
+- support a policy without a binding via an extra flag
+- support `MutatingAdmissionPolicy`
+- support `UPDATE` requests with `oldObject`
+- support `paramKind`
 
 ## Makefile setup to use a consistent version of kapt
 

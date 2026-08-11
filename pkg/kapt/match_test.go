@@ -81,7 +81,7 @@ var _ = Describe("match", func() {
 
 	It("skips when all bindings do not match", func() {
 		var result Result
-		content := policyWith("  validations: [{expression: 'false'}]") + `
+		content := barePolicy("  validations: [{expression: 'false'}]") + `
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

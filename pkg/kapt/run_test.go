@@ -20,8 +20,9 @@ var _ = Describe("Run", func() {
 
 	It("exits 0 when nothing is denied", func() {
 		withPolicy("  validations: [{expression: 'true'}]", job("good", "apps"), func(policy string, resource string) {
-			code, stdout, _ := runKapt(policy, resource)
+			code, stdout, stderr := runKapt(policy, resource)
 			Expect(stdout).To(Equal("batch/v1/Job apps/good ALLOWED\n"))
+			Expect(stderr).To(Equal(""))
 			Expect(code).To(Equal(0))
 		})
 	})

@@ -62,6 +62,9 @@ func LoadPolicy(path string) (*Policy, error) {
 		return nil, fmt.Errorf("%s: paramKind is not supported", path)
 	}
 	policy.Bindings = keepBindingsFor(policy.Policy.Name, policy.Bindings)
+	if len(policy.Bindings) == 0 {
+		return nil, fmt.Errorf("%s: found no ValidatingAdmissionPolicyBinding for %s", path, policy.Policy.Name)
+	}
 	policy.validator = compilePolicy(policy.Policy)
 
 	if policy.matcher, err = newMatcher(policy.Policy.Spec.MatchConstraints); err != nil {

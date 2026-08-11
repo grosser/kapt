@@ -68,8 +68,22 @@ func withStdin(content string, fn func()) {
 	})
 }
 
-// a policy with the given spec, name and failurePolicy are filled in
+// a binding for barePolicy that selects everything
+const binding = `
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: test.example.com}
+spec: {policyName: test.example.com, validationActions: [Deny]}
+`
+
+// a policy with the given spec and a binding that selects everything
 func policyWith(spec string) string {
+	return barePolicy(spec) + binding
+}
+
+// a policy with the given spec, name and failurePolicy are filled in
+func barePolicy(spec string) string {
 	return `
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
