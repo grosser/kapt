@@ -50,7 +50,8 @@ var _ = Describe("Run", func() {
 	It("honors namespaceSelector when given an inventory", func() {
 		withFile("job.yaml", job("bad", "disabled"), func(path string) {
 			code, stdout, stderr := runKapt("-inventory", namespacesPath, policyPath, path)
-			Expect(stdout).To(Equal("batch/v1/Job disabled/bad SKIPPED namespaceSelector\n"))
+			Expect(stdout).To(Equal(
+				"batch/v1/Job disabled/bad SKIPPED binding job-backoff-limit.example.com namespaceSelector\n"))
 			Expect(stderr).To(Equal(""))
 			Expect(code).To(Equal(0))
 		})

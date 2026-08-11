@@ -14,7 +14,7 @@ kapt policy.yaml resources.yaml
 ```
 batch/v1/Job apps/bad DENIED Do not set backoffLimit > 10 on bad
 batch/v1/Job apps/good ALLOWED
-apps/v1/Deployment apps/web SKIPPED resourceRules
+apps/v1/Deployment apps/web SKIPPED matchConstraints resourceRules
 ```
 
 Exit status: `0` = nothing denied, `1` = at least one denied, `2` = error (bad input or CEL error)
@@ -35,11 +35,19 @@ Options:
     	request.userInfo.username (default "kapt")
 ```
 
-- The policy file must hold a `ValidatingAdmissionPolicy` and its `ValidatingAdmissionPolicyBinding`s,
-  since a policy without a binding is ignored by the apiserver
+- The policy file must hold exactly one `ValidatingAdmissionPolicy` and its `ValidatingAdmissionPolicyBinding`s,
+  since a policy without a binding is ignored by the apiserver.
+  To test multiple policies, loop: `for p in policies/*/rule.yaml; do kapt $p resources.yaml; done`
 - Resource files can hold multiple documents and `List`s, `-` reads stdin
-- Resources the policy does not select are reported as `SKIPPED` with the reason
-  (`resourceRules`, `objectSelector`, `namespaceSelector`, `matchConditions`, ...)
+- Resources the policy does not select are reported as `SKIPPED` with the field that rejected them,
+  prefixed by `matchConstraints` or `binding <name>`, `matchConditions` has no prefix since it is policy level
+
+  ```
+  batch/v1/Job apps/dba SKIPPED binding job-backoff-limit objectSelector
+  apps/v1/Deployment apps/web SKIPPED matchConstraints resourceRules
+  ```
+- When no binding selects a resource, every bindings reason is shown:
+  `binding a namespaceSelector, binding b objectSelector`
 
 ### Validate everything in a cluster against a policy change
 
@@ -75,6 +83,7 @@ Or use it as a go library, see [pkg/kapt](pkg/kapt) for `LoadPolicy`, `LoadResou
 ## TODO
 
 - support a policy without a binding via an extra flag
+- validate multiple policies in one run, parsing the resources only once
 - support `MutatingAdmissionPolicy`
 - support `UPDATE` requests with `oldObject`
 - support `paramKind`

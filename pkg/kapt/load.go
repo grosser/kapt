@@ -36,12 +36,11 @@ func LoadPolicy(path string) (*Policy, error) {
 	}
 
 	policy := &Policy{}
+	found := 0
 	for _, document := range documents {
 		switch document.GetKind() {
 		case "ValidatingAdmissionPolicy":
-			if policy.Policy != nil {
-				return nil, fmt.Errorf("%s: found multiple ValidatingAdmissionPolicy documents", path)
-			}
+			found++
 			policy.Policy = &admissionregistrationv1.ValidatingAdmissionPolicy{}
 			if err = convert(document, policy.Policy); err != nil {
 				return nil, fmt.Errorf("%s: %w", path, err)
@@ -55,8 +54,15 @@ func LoadPolicy(path string) (*Policy, error) {
 		}
 	}
 
-	if policy.Policy == nil {
+	if found == 0 {
 		return nil, fmt.Errorf("%s: found no ValidatingAdmissionPolicy", path)
+	}
+	if found > 1 {
+		return nil, fmt.Errorf(
+			"%s: found %d ValidatingAdmissionPolicy documents, kapt validates one policy per run\n"+
+				"  split the file or loop: for p in policies/*/rule.yaml; do kapt $p resources.yaml; done",
+			path, found,
+		)
 	}
 	if policy.Policy.Spec.ParamKind != nil {
 		return nil, fmt.Errorf("%s: paramKind is not supported", path)
@@ -67,11 +73,11 @@ func LoadPolicy(path string) (*Policy, error) {
 	}
 	policy.validator = compilePolicy(policy.Policy)
 
-	if policy.matcher, err = newMatcher(policy.Policy.Spec.MatchConstraints); err != nil {
+	if policy.matcher, err = newMatcher("matchConstraints", policy.Policy.Spec.MatchConstraints); err != nil {
 		return nil, fmt.Errorf("%s: matchConstraints: %w", path, err)
 	}
 	for _, binding := range policy.Bindings {
-		bindingMatcher, err := newMatcher(binding.Spec.MatchResources)
+		bindingMatcher, err := newMatcher("binding "+binding.Name, binding.Spec.MatchResources)
 		if err != nil {
 			return nil, fmt.Errorf("%s: binding %s matchResources: %w", path, binding.Name, err)
 		}

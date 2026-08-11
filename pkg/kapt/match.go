@@ -3,6 +3,7 @@ package kapt
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,15 +15,17 @@ import (
 // converted once so validating many resources stays cheap.
 // scope and matchPolicy are ignored since they need a live apiserver to resolve.
 type matcher struct {
+	source            string // "matchConstraints" or "binding <name>", so skip reasons say who rejected
 	rules             []admissionregistrationv1.NamedRuleWithOperations
 	excludeRules      []admissionregistrationv1.NamedRuleWithOperations
 	objectSelector    labels.Selector
 	namespaceSelector labels.Selector
 }
 
-func newMatcher(match *admissionregistrationv1.MatchResources) (*matcher, error) {
+func newMatcher(source string, match *admissionregistrationv1.MatchResources) (*matcher, error) {
+	everything := labels.Everything()
 	if match == nil {
-		return &matcher{objectSelector: labels.Everything(), namespaceSelector: labels.Everything()}, nil
+		return &matcher{source: source, objectSelector: everything, namespaceSelector: everything}, nil
 	}
 
 	objectSelector, err := newSelector(match.ObjectSelector)
@@ -34,6 +37,7 @@ func newMatcher(match *admissionregistrationv1.MatchResources) (*matcher, error)
 		return nil, err
 	}
 	return &matcher{
+		source:            source,
 		rules:             match.ResourceRules,
 		excludeRules:      match.ExcludeResourceRules,
 		objectSelector:    objectSelector,
@@ -43,28 +47,32 @@ func newMatcher(match *admissionregistrationv1.MatchResources) (*matcher, error)
 
 // match reports if the policy and at least one of its bindings select the resource,
 // matchConditions are checked during validation.
-func (p *Policy) match(resource *Resource) (matched bool, reason string) {
-	if matched, reason = p.matcher.match(resource, p.namespaces); !matched {
+func (p *Policy) match(resource *Resource) (bool, string) {
+	if matched, reason := p.matcher.match(resource, p.namespaces); !matched {
 		return false, reason
 	}
+
+	reasons := make([]string, 0, len(p.bindingMatchers))
 	for _, binding := range p.bindingMatchers {
-		if matched, reason = binding.match(resource, p.namespaces); matched {
+		matched, reason := binding.match(resource, p.namespaces)
+		if matched {
 			return true, ""
 		}
+		reasons = append(reasons, reason)
 	}
-	return false, reason // reason of the last binding, they are usually equal
+	return false, strings.Join(reasons, ", ") // no binding selected it, so show why each did not
 }
 
 // namespaces is nil when no inventory was loaded, then namespaceSelector is ignored
 func (m *matcher) match(resource *Resource, namespaces map[string]*corev1.Namespace) (bool, string) {
 	if len(m.rules) > 0 && !matchesAnyRule(m.rules, resource) {
-		return false, "resourceRules"
+		return false, m.reason("resourceRules")
 	}
 	if matchesAnyRule(m.excludeRules, resource) {
-		return false, "excludeResourceRules"
+		return false, m.reason("excludeResourceRules")
 	}
 	if !m.objectSelector.Matches(labels.Set(resource.GetLabels())) {
-		return false, "objectSelector"
+		return false, m.reason("objectSelector")
 	}
 	if namespaces == nil || m.namespaceSelector.Empty() {
 		return true, ""
@@ -72,12 +80,18 @@ func (m *matcher) match(resource *Resource, namespaces map[string]*corev1.Namesp
 
 	namespace, found := namespaces[resource.GetNamespace()]
 	if !found {
-		return false, fmt.Sprintf("namespace %s missing from inventory", resource.GetNamespace())
+		missing := fmt.Sprintf("namespaceSelector: namespace %s missing from inventory", resource.GetNamespace())
+		return false, m.reason(missing)
 	}
 	if !m.namespaceSelector.Matches(labels.Set(namespace.Labels)) {
-		return false, "namespaceSelector"
+		return false, m.reason("namespaceSelector")
 	}
 	return true, ""
+}
+
+// reason names the field that rejected the resource and the matcher it belongs to
+func (m *matcher) reason(field string) string {
+	return m.source + " " + field
 }
 
 func (p *Policy) hasNamespaceSelector() bool {

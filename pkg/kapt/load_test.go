@@ -46,7 +46,10 @@ spec: {policyName: other.example.com}
 			policyWith("  validations: [{expression: 'false'}]")
 		withFile("policy.yaml", content, func(path string) {
 			_, err := LoadPolicy(path)
-			Expect(err).To(MatchError(ContainSubstring("found multiple ValidatingAdmissionPolicy documents")))
+			Expect(err).To(MatchError(ContainSubstring(
+				"found 2 ValidatingAdmissionPolicy documents, kapt validates one policy per run\n" +
+					"  split the file or loop: for p in policies/*/rule.yaml; do kapt $p resources.yaml; done",
+			)))
 		})
 	})
 

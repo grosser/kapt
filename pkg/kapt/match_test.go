@@ -41,7 +41,7 @@ var _ = Describe("match", func() {
 `
 		result := matchJob(spec, job("bad", "apps"))
 		Expect(result.Verdict).To(Equal(Skipped))
-		Expect(result.Message).To(Equal("resourceRules"))
+		Expect(result.Message).To(Equal("matchConstraints resourceRules"))
 	})
 
 	It("skips rules that do not include CREATE", func() {
@@ -49,7 +49,7 @@ var _ = Describe("match", func() {
     resourceRules:
     - {apiGroups: ["batch"], apiVersions: ["v1"], operations: ["DELETE"], resources: ["jobs"]}
 `
-		Expect(matchJob(spec, job("bad", "apps")).Message).To(Equal("resourceRules"))
+		Expect(matchJob(spec, job("bad", "apps")).Message).To(Equal("matchConstraints resourceRules"))
 	})
 
 	It("matches resourceNames", func() {
@@ -58,7 +58,7 @@ var _ = Describe("match", func() {
     - {apiGroups: ["batch"], apiVersions: ["v1"], operations: ["CREATE"], resources: ["jobs"], resourceNames: ["bad"]}
 `
 		Expect(matchJob(spec, job("bad", "apps")).Verdict).To(Equal(Denied))
-		Expect(matchJob(spec, job("other", "apps")).Message).To(Equal("resourceRules"))
+		Expect(matchJob(spec, job("other", "apps")).Message).To(Equal("matchConstraints resourceRules"))
 	})
 
 	It("skips excluded resources", func() {
@@ -66,17 +66,18 @@ var _ = Describe("match", func() {
     excludeResourceRules:
     - {apiGroups: ["batch"], apiVersions: ["*"], operations: ["*"], resources: ["jobs"]}
 `
-		Expect(matchJob(spec, job("bad", "apps")).Message).To(Equal("excludeResourceRules"))
+		Expect(matchJob(spec, job("bad", "apps")).Message).To(Equal("matchConstraints excludeResourceRules"))
 	})
 
 	It("skips resources not selected by objectSelector", func() {
 		spec := "  matchConstraints: {objectSelector: {matchLabels: {keep: 'true'}}}\n"
-		Expect(matchJob(spec, job("bad", "apps")).Message).To(Equal("objectSelector"))
+		Expect(matchJob(spec, job("bad", "apps")).Message).To(Equal("matchConstraints objectSelector"))
 	})
 
 	It("skips resources in namespaces that are missing from the inventory", func() {
 		spec := "  matchConstraints: {namespaceSelector: {matchLabels: {keep: 'true'}}}\n"
-		Expect(matchJob(spec, job("bad", "elsewhere")).Message).To(Equal("namespace elsewhere missing from inventory"))
+		Expect(matchJob(spec, job("bad", "elsewhere")).Message).To(
+			Equal("matchConstraints namespaceSelector: namespace elsewhere missing from inventory"))
 	})
 
 	It("skips when all bindings do not match", func() {
@@ -107,7 +108,7 @@ spec:
 				result = policy.Validate(resources[0], Options{})
 			})
 		})
-		Expect(result.Message).To(Equal("objectSelector"))
+		Expect(result.Message).To(Equal("binding a objectSelector, binding b objectSelector"))
 	})
 })
 
