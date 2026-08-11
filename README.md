@@ -114,6 +114,12 @@ kapt: $(LOCALBIN) # Download kapt (replace existing if incorrect version)
 make # build and test with 100% coverage enforcement
 ```
 
+## Release
+
+- never release a major version unless absolutely necessary, since that requires a /v2 path
+- make new version commit that changes version in readme "Makefile setup" + `pkg/kapt/run.go`
+- push and tag the commit
+
 ## Author
 
 [Michael Grosser](https://grosser.it)<br/>
