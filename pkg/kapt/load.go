@@ -27,13 +27,15 @@ type Policy struct {
 	namespaces      map[string]*corev1.Namespace // nil until LoadNamespaces was called
 }
 
-// LoadPolicy reads the ValidatingAdmissionPolicy and its bindings from a file with
+// LoadPolicy reads the ValidatingAdmissionPolicy and its bindings from files with
 // one or more yaml documents and compiles the policies CEL expressions.
-func LoadPolicy(path string) (*Policy, error) {
-	documents, err := loadDocuments(path)
+// Multiple files are read as one, for policies that keep their bindings separate.
+func LoadPolicy(paths ...string) (*Policy, error) {
+	documents, err := loadDocuments(paths...)
 	if err != nil {
 		return nil, err
 	}
+	path := strings.Join(paths, " ") // name all files in error messages
 
 	policy := &Policy{}
 	found := 0
@@ -130,8 +132,20 @@ func (p *Policy) LoadNamespaces(path string) error {
 	return nil
 }
 
-// loadDocuments reads every non-empty yaml document from a file, "-" reads stdin.
-func loadDocuments(path string) ([]*Resource, error) {
+// loadDocuments reads every non-empty yaml document from the given files, "-" reads stdin.
+func loadDocuments(paths ...string) ([]*Resource, error) {
+	documents := []*Resource{}
+	for _, path := range paths {
+		found, err := loadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		documents = append(documents, found...)
+	}
+	return documents, nil
+}
+
+func loadFile(path string) ([]*Resource, error) {
 	reader, err := open(path)
 	if err != nil {
 		return nil, err

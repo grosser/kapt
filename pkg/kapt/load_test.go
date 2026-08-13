@@ -13,6 +13,24 @@ var _ = Describe("LoadPolicy", func() {
 		Expect(policy.Bindings).To(HaveLen(1))
 	})
 
+	It("reads a policy that keeps its binding in another file", func() {
+		withFile("policy.yaml", barePolicy("  validations: [{expression: 'true'}]"), func(policyPath string) {
+			withFile("binding.yaml", binding, func(bindingPath string) {
+				policy, err := LoadPolicy(policyPath, bindingPath)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(policy.Policy.Name).To(Equal("test.example.com"))
+				Expect(policy.Bindings).To(HaveLen(1))
+			})
+		})
+	})
+
+	It("names all files in errors", func() {
+		withFile("policy.yaml", job("bad", "apps"), func(path string) {
+			_, err := LoadPolicy(path, path)
+			Expect(err).To(MatchError(ContainSubstring(path + " " + path + ": found no ValidatingAdmissionPolicy")))
+		})
+	})
+
 	It("fails without a binding", func() {
 		withFile("policy.yaml", barePolicy("  validations: [{expression: 'true'}]"), func(path string) {
 			_, err := LoadPolicy(path)
