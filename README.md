@@ -68,6 +68,13 @@ allowed = status.exitstatus.zero?
 ```
 
 Or use it as a go library, see [pkg/kapt](pkg/kapt) for `LoadPolicy`, `LoadResources` and `ValidateAll`.
+Use `DefaultOptions` to get the same `Options` the command line uses, so verdicts match:
+
+```go
+policy, err := kapt.LoadPolicy("policy.yaml")
+resources, err := kapt.LoadResources("resource.yaml")
+verdict := policy.Validate(resources[0], kapt.DefaultOptions()).Verdict
+```
 
 ## Notes
 

@@ -35,6 +35,11 @@ type Options struct {
 	Color     bool
 }
 
+// DefaultOptions are the options the command line uses, so library users get the same verdicts.
+func DefaultOptions() Options {
+	return Options{User: "kapt", Groups: []string{"system:masters", "system:authenticated"}}
+}
+
 // Run is the command line interface, it never panics and returns the exit code.
 func Run(argv []string, stdout io.Writer, stderr io.Writer) int {
 	set, options, groups, noColor := newFlagSet(stderr)
@@ -128,8 +133,9 @@ func newFlagSet(stderr io.Writer) (set *flag.FlagSet, options *Options, groups *
 	set.StringVar(&options.Inventory, "inventory", "",
 		"file with Namespace resources (for namespaceSelector and namespaceObject)")
 	set.BoolVar(&options.JSON, "json", false, "print results as a json array")
-	set.StringVar(&options.User, "user", "kapt", "request.userInfo.username")
-	groups = set.String("groups", "system:masters,system:authenticated", "comma separated request.userInfo.groups")
+	defaults := DefaultOptions()
+	set.StringVar(&options.User, "user", defaults.User, "request.userInfo.username")
+	groups = set.String("groups", strings.Join(defaults.Groups, ","), "comma separated request.userInfo.groups")
 	noColor = set.Bool("no-color", false, "disable colored output")
 	return set, options, groups, noColor
 }
