@@ -107,7 +107,7 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 KAPT ?= $(LOCALBIN)/kapt
-KAPT_VERSION ?= v0.1.0
+KAPT_VERSION ?= v0.2.0
 
 .PHONY: kapt
 kapt: $(LOCALBIN) # Download kapt (replace existing if incorrect version)
