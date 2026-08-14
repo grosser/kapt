@@ -1,0 +1,25 @@
+name: Release
+on:
+  release:
+    types:
+    - created # on push does not work and `on: release` triggers 3 builds
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [ 'amd64', 'arm64' ]
+        os: [ 'linux', 'darwin' ]
+    name: ${{ matrix.os }} ${{ matrix.arch }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: compile and release
+      uses: wangyoucao577/go-release-action@v1.55
+      env:
+        CGO_ENABLED: "0" # support alpine
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        goarch: ${{ matrix.arch }}
+        goos: ${{ matrix.os }}
+        goversion: go.mod
+        ldflags: "-s -w"

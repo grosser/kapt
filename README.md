@@ -7,7 +7,12 @@
 - 💰 Validates **thousands** of resources per second, to see what a policy change would break
 
 ```bash
+# download a binary for your os/arch (linux/darwin, amd64/arm64)
+curl -sfL https://github.com/grosser/kapt/releases/download/v0.3.0/kapt-v0.3.0-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/).tar.gz | tar -zx && chmod +x kapt
+
+# ... or build it yourself
 go install github.com/grosser/kapt@latest
+
 kapt policy.yaml resources.yaml
 ```
 
@@ -107,13 +112,15 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 KAPT ?= $(LOCALBIN)/kapt
-KAPT_VERSION ?= v0.2.0
+KAPT_VERSION ?= v0.3.0
+KAPT_PLATFORM ?= $(shell uname -s | tr A-Z a-z)-$(shell uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/)
+KAPT_URL ?= https://github.com/grosser/kapt/releases/download/$(KAPT_VERSION)/kapt-$(KAPT_VERSION)-$(KAPT_PLATFORM).tar.gz
 
 .PHONY: kapt
 kapt: $(LOCALBIN) # Download kapt (replace existing if incorrect version)
 	@(test -f $(KAPT) && $(KAPT) version | grep "$(KAPT_VERSION)" >/dev/null) || \
 	(rm -f $(KAPT) && echo "Installing $(KAPT) $(KAPT_VERSION)" && \
-	GOBIN=$(LOCALBIN) go install github.com/grosser/kapt@$(KAPT_VERSION))
+	curl -sSfL $(KAPT_URL) | tar -zx -C $(LOCALBIN) && chmod +x $(KAPT))
 ```
 
 ## Development
@@ -125,8 +132,10 @@ make # build and test with 100% coverage enforcement
 ## Release
 
 - never release a major version unless absolutely necessary, since that requires a /v2 path
-- make new version commit that changes version in readme "Makefile setup" + `pkg/kapt/run.go`
+- make new version commit that changes `pkg/kapt/run.go` and every version in the readme
+  (download url + "Makefile setup"), `grep -rEn 'v[0-9]+\.[0-9]+\.[0-9]+' README.md pkg` to find them
 - push and tag the commit
+- create a github release for the tag, which builds and attaches the binaries
 
 ## Author
 
