@@ -8,7 +8,7 @@
 
 ```bash
 # download a binary for your os/arch (linux/darwin, amd64/arm64)
-curl -sfL https://github.com/grosser/kapt/releases/download/v0.3.0/kapt-v0.3.0-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/).tar.gz | tar -zx && chmod +x kapt
+curl -sSfL --retry 3 https://github.com/grosser/kapt/releases/download/v0.3.0/kapt-v0.3.0-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/).tar.gz | tar -zx && chmod +x kapt
 
 # ... or build it yourself
 go install github.com/grosser/kapt@latest
@@ -120,7 +120,7 @@ KAPT_URL ?= https://github.com/grosser/kapt/releases/download/$(KAPT_VERSION)/ka
 kapt: $(LOCALBIN) # Download kapt (replace existing if incorrect version)
 	@(test -f $(KAPT) && $(KAPT) version | grep "$(KAPT_VERSION)" >/dev/null) || \
 	(rm -f $(KAPT) && echo "Installing $(KAPT) $(KAPT_VERSION)" && \
-	curl -sSfL $(KAPT_URL) | tar -zx -C $(LOCALBIN) && chmod +x $(KAPT))
+	curl -sSfL --retry 3 $(KAPT_URL) | tar -zx -C $(LOCALBIN) && chmod +x $(KAPT))
 ```
 
 ## Development
