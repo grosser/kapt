@@ -21,5 +21,4 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goarch: ${{ matrix.arch }}
         goos: ${{ matrix.os }}
-        goversion: go.mod
         ldflags: "-s -w"
