@@ -8,7 +8,7 @@
 
 ```bash
 # download a binary for your os/arch (linux/darwin, amd64/arm64)
-curl -sSfL --retry 3 https://github.com/grosser/kapt/releases/download/v0.3.0/kapt-v0.3.0-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/).tar.gz | tar -zx && chmod +x kapt
+curl -sSfL --retry 3 https://github.com/grosser/kapt/releases/download/v0.3.1/kapt-v0.3.1-$(uname -s | tr A-Z a-z)-$(uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/).tar.gz | tar -zx && chmod +x kapt
 
 # ... or build it yourself
 go install github.com/grosser/kapt@latest
@@ -112,7 +112,7 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 KAPT ?= $(LOCALBIN)/kapt
-KAPT_VERSION ?= v0.3.0
+KAPT_VERSION ?= v0.3.1
 KAPT_PLATFORM ?= $(shell uname -s | tr A-Z a-z)-$(shell uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/)
 KAPT_URL ?= https://github.com/grosser/kapt/releases/download/$(KAPT_VERSION)/kapt-$(KAPT_VERSION)-$(KAPT_PLATFORM).tar.gz
 
