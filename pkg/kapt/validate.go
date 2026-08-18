@@ -96,7 +96,15 @@ func attributes(resource *Resource, options Options) *admission.VersionedAttribu
 
 // resourceFor guesses the resource name of a resource, the same way client-go does when
 // it has no discovery information (Job -> jobs, Ingress -> ingresses, Policy -> policies)
+// but with a fix for kinds ending in a vowel + "y", which client-go gets wrong
+// (AccessKey -> accesskeies instead of accesskeys)
 func resourceFor(resource *Resource) schema.GroupVersionResource {
-	gvr, _ := meta.UnsafeGuessKindToResource(resource.GroupVersionKind())
+	gvk := resource.GroupVersionKind()
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+	kind := strings.ToLower(gvk.Kind)
+	if endsInVowelY := len(kind) > 1 && strings.HasSuffix(kind, "y") &&
+		strings.ContainsRune("aeiou", rune(kind[len(kind)-2])); endsInVowelY {
+		gvr.Resource = kind + "s"
+	}
 	return gvr
 }

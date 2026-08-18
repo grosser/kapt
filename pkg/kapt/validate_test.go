@@ -83,5 +83,19 @@ var _ = Describe("resourceFor", func() {
 
 		resources[0].SetKind("Ingress")
 		Expect(resourceFor(resources[0]).Resource).To(Equal("ingresses"))
+
+		resources[0].SetKind("Policy")
+		Expect(resourceFor(resources[0]).Resource).To(Equal("policies"))
+	})
+
+	It("does not turn vowel + y into ies", func() {
+		resources, err := LoadResources(resourcesPath)
+		Expect(err).ToNot(HaveOccurred())
+
+		resources[0].SetKind("AccessKey")
+		Expect(resourceFor(resources[0]).Resource).To(Equal("accesskeys"))
+
+		resources[0].SetKind("UserSSHKey")
+		Expect(resourceFor(resources[0]).Resource).To(Equal("usersshkeys"))
 	})
 })
