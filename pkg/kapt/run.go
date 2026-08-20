@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-const Version = "v0.3.1"
+const Version = "v0.4.0"
 
 const usage = `Usage: kapt [options] <policy.yaml> <resource.yaml>...
 
