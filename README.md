@@ -85,7 +85,8 @@ verdict := policy.Validate(resources[0], kapt.DefaultOptions()).Verdict
 ## Notes
 
 - Simulates a `CREATE` request, so `oldObject` is not set
-- `paramKind` is not supported
+- `paramKind` needs the param document in the policy file, every binding must reference it via `paramRef`
+  name and namespace (`selector` is not supported)
 - `namespaceSelector` and the `namespaceObject` variable need `--inventory`, without it selectors are ignored
 - `matchPolicy` and `scope` are ignored since they need a live apiserver to resolve
 - Resource names are guessed from the kind the same way `client-go` does (`Ingress` -> `ingresses`)
@@ -99,7 +100,6 @@ verdict := policy.Validate(resources[0], kapt.DefaultOptions()).Verdict
 - validate multiple policies in one run, parsing the resources only once
 - support `MutatingAdmissionPolicy`
 - support `UPDATE` requests with `oldObject`
-- support `paramKind`
 
 ## Makefile setup to use a consistent version of kapt
 

@@ -60,6 +60,22 @@ var _ = Describe("Validate", func() {
 		Expect(validate(spec, job("bad", "apps")).Verdict).To(Equal(Allowed))
 	})
 
+	It("exposes params from the policy file", func() {
+		spec := "  validations: [{expression: \"object.spec.backoffLimit <= int(params.data.max)\", message: 'over the limit'}]"
+		var result Result
+		withFile("policy.yaml", paramPolicy(spec), func(policyPath string) {
+			withFile("resource.yaml", job("bad", "apps"), func(resourcePath string) {
+				policy, err := LoadPolicy(policyPath)
+				Expect(err).ToNot(HaveOccurred())
+				resources, err := LoadResources(resourcePath)
+				Expect(err).ToNot(HaveOccurred())
+				result = policy.Validate(resources[0], Options{})
+			})
+		})
+		Expect(result.Verdict).To(Equal(Denied))
+		Expect(result.Message).To(Equal("over the limit"))
+	})
+
 	It("can access the namespaceObject", func() {
 		spec := "  validations: [{expression: \"namespaceObject.metadata.name == 'apps'\"}]"
 		var result Result

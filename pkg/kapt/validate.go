@@ -57,7 +57,7 @@ func (p *Policy) Validate(resource *Resource, options Options) Result {
 		context.Background(),
 		resourceFor(resource),
 		attributes(resource, options),
-		nil, // versionedParams, paramKind is not supported
+		p.params, // versionedParams, nil unless the policy has a paramKind
 		p.namespaces[resource.GetNamespace()],
 		celconfig.RuntimeCELCostBudget,
 		nil, // authorizer

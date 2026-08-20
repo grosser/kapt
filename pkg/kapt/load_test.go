@@ -1,6 +1,8 @@
 package kapt
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -71,11 +73,11 @@ spec: {policyName: other.example.com}
 		})
 	})
 
-	It("fails on paramKind", func() {
-		spec := "  paramKind: {apiVersion: v1, kind: ConfigMap}\n  validations: [{expression: 'true'}]"
-		withFile("policy.yaml", policyWith(spec), func(path string) {
+	It("fails on paramRef without paramKind", func() {
+		content := barePolicy("  validations: [{expression: 'true'}]") + paramBinding
+		withFile("policy.yaml", content, func(path string) {
 			_, err := LoadPolicy(path)
-			Expect(err).To(MatchError(ContainSubstring("paramKind is not supported")))
+			Expect(err).To(MatchError(ContainSubstring("binding test.example.com has paramRef but policy has no paramKind")))
 		})
 	})
 
@@ -110,6 +112,72 @@ spec: {policyName: other.example.com}
 		withFile("policy.yaml", policyWith(spec), func(path string) {
 			_, err := LoadPolicy(path)
 			Expect(err).To(MatchError(ContainSubstring("matchConstraints: ")))
+		})
+	})
+
+	It("loads a policy with params", func() {
+		withFile("policy.yaml", paramPolicy("  validations: [{expression: 'true'}]"), func(path string) {
+			policy, err := LoadPolicy(path)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(policy.params.GetName()).To(Equal("global"))
+		})
+	})
+
+	It("fails on paramKind without a param document", func() {
+		content := barePolicy("  paramKind: {apiVersion: v1, kind: ConfigMap}\n  validations: [{expression: 'true'}]") + paramBinding
+		withFile("policy.yaml", content, func(path string) {
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring("found no v1 ConfigMap document for paramKind")))
+		})
+	})
+
+	It("fails on multiple param documents", func() {
+		withFile("policy.yaml", paramPolicy("  validations: [{expression: 'true'}]")+paramConfigMap, func(path string) {
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring("found 2 ConfigMap documents, only one param is supported")))
+		})
+	})
+
+	It("fails on a param document without paramKind", func() {
+		withFile("policy.yaml", policyWith("  validations: [{expression: 'true'}]")+paramConfigMap, func(path string) {
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring("found ConfigMap document but policy has no paramKind")))
+		})
+	})
+
+	It("fails on a document that does not match paramKind", func() {
+		content := paramPolicy("  validations: [{expression: 'true'}]") + "\n---\nkind: Role\n"
+		withFile("policy.yaml", content, func(path string) {
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring("found Role document but paramKind is v1/ConfigMap")))
+		})
+	})
+
+	It("fails on a binding without paramRef", func() {
+		content := barePolicy("  paramKind: {apiVersion: v1, kind: ConfigMap}\n  validations: [{expression: 'true'}]") +
+			binding + paramConfigMap
+		withFile("policy.yaml", content, func(path string) {
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring("binding test.example.com has no paramRef")))
+		})
+	})
+
+	It("fails on a paramRef selector", func() {
+		content := paramPolicy("  validations: [{expression: 'true'}]")
+		content = strings.Replace(content, "paramRef: {name: global, namespace: config}", "paramRef: {selector: {}}", 1)
+		withFile("policy.yaml", content, func(path string) {
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring("binding test.example.com paramRef selector is not supported")))
+		})
+	})
+
+	It("fails on a paramRef that does not match the param", func() {
+		content := paramPolicy("  validations: [{expression: 'true'}]")
+		content = strings.Replace(content, "paramRef: {name: global, namespace: config}", "paramRef: {name: other, namespace: config}", 1)
+		withFile("policy.yaml", content, func(path string) {
+			_, err := LoadPolicy(path)
+			Expect(err).To(MatchError(ContainSubstring(
+				"binding test.example.com paramRef config/other does not match param config/global")))
 		})
 	})
 

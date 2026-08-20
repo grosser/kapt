@@ -24,6 +24,7 @@ type Policy struct {
 	validator       validating.Validator
 	matcher         *matcher
 	bindingMatchers []*matcher
+	params          *Resource                    // nil unless the policy has a paramKind
 	namespaces      map[string]*corev1.Namespace // nil until LoadNamespaces was called
 }
 
@@ -39,6 +40,7 @@ func LoadPolicy(paths ...string) (*Policy, error) {
 
 	policy := &Policy{}
 	found := 0
+	others := []*Resource{} // documents that are neither policy nor binding, used for params
 	for _, document := range documents {
 		switch document.GetKind() {
 		case "ValidatingAdmissionPolicy":
@@ -53,6 +55,8 @@ func LoadPolicy(paths ...string) (*Policy, error) {
 				return nil, fmt.Errorf("%s: %w", path, err)
 			}
 			policy.Bindings = append(policy.Bindings, binding)
+		default:
+			others = append(others, document)
 		}
 	}
 
@@ -66,12 +70,12 @@ func LoadPolicy(paths ...string) (*Policy, error) {
 			path, found,
 		)
 	}
-	if policy.Policy.Spec.ParamKind != nil {
-		return nil, fmt.Errorf("%s: paramKind is not supported", path)
-	}
 	policy.Bindings = keepBindingsFor(policy.Policy.Name, policy.Bindings)
 	if len(policy.Bindings) == 0 {
 		return nil, fmt.Errorf("%s: found no ValidatingAdmissionPolicyBinding for %s", path, policy.Policy.Name)
+	}
+	if policy.params, err = findParams(policy.Policy, policy.Bindings, others, path); err != nil {
+		return nil, err
 	}
 	policy.validator = compilePolicy(policy.Policy)
 
@@ -203,4 +207,65 @@ func keepBindingsFor(name string, bindings []*admissionregistrationv1.Validating
 		}
 	}
 	return kept
+}
+
+// findParams resolves the single param document a policy with paramKind needs:
+// it must be part of the policy file and every binding must reference it via paramRef name/namespace
+func findParams(
+	policy *admissionregistrationv1.ValidatingAdmissionPolicy,
+	bindings []*admissionregistrationv1.ValidatingAdmissionPolicyBinding,
+	others []*Resource,
+	path string,
+) (*Resource, error) {
+	paramKind := policy.Spec.ParamKind
+	if paramKind == nil {
+		for _, binding := range bindings {
+			if binding.Spec.ParamRef != nil {
+				return nil, fmt.Errorf("%s: binding %s has paramRef but policy has no paramKind", path, binding.Name)
+			}
+		}
+		if len(others) > 0 {
+			return nil, fmt.Errorf("%s: found %s document but policy has no paramKind", path, others[0].GetKind())
+		}
+		return nil, nil
+	}
+
+	matches := []*Resource{}
+	for _, document := range others {
+		if document.GetAPIVersion() == paramKind.APIVersion && document.GetKind() == paramKind.Kind {
+			matches = append(matches, document)
+		} else {
+			return nil, fmt.Errorf(
+				"%s: found %s document but paramKind is %s/%s",
+				path, document.GetKind(), paramKind.APIVersion, paramKind.Kind,
+			)
+		}
+	}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf(
+			"%s: found no %s %s document for paramKind, add it to the policy file",
+			path, paramKind.APIVersion, paramKind.Kind,
+		)
+	}
+	if len(matches) > 1 {
+		return nil, fmt.Errorf("%s: found %d %s documents, only one param is supported", path, len(matches), paramKind.Kind)
+	}
+
+	params := matches[0]
+	for _, binding := range bindings {
+		ref := binding.Spec.ParamRef
+		if ref == nil {
+			return nil, fmt.Errorf("%s: binding %s has no paramRef", path, binding.Name)
+		}
+		if ref.Selector != nil {
+			return nil, fmt.Errorf("%s: binding %s paramRef selector is not supported, use name and namespace", path, binding.Name)
+		}
+		if ref.Name != params.GetName() || ref.Namespace != params.GetNamespace() {
+			return nil, fmt.Errorf(
+				"%s: binding %s paramRef %s/%s does not match param %s/%s",
+				path, binding.Name, ref.Namespace, ref.Name, params.GetNamespace(), params.GetName(),
+			)
+		}
+	}
+	return params, nil
 }

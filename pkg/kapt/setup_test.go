@@ -82,6 +82,32 @@ func policyWith(spec string) string {
 	return barePolicy(spec) + binding
 }
 
+// a binding that references the global config param
+const paramBinding = `
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: {name: test.example.com}
+spec:
+  policyName: test.example.com
+  validationActions: [Deny]
+  paramRef: {name: global, namespace: config}
+`
+
+// the global config param that paramBinding references
+const paramConfigMap = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: global, namespace: config}
+data: {max: "5"}
+`
+
+// a policy with a ConfigMap paramKind, its binding and the param document
+func paramPolicy(spec string) string {
+	return barePolicy("  paramKind: {apiVersion: v1, kind: ConfigMap}\n"+spec) + paramBinding + paramConfigMap
+}
+
 // a policy with the given spec, name and failurePolicy are filled in
 func barePolicy(spec string) string {
 	return `

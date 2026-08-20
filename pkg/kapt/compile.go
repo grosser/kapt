@@ -12,8 +12,9 @@ import (
 // Validator from a policy's variables, matchConditions and validations using
 // the same CEL environment the apiserver uses.
 func compilePolicy(policy *admissionregistrationv1.ValidatingAdmissionPolicy) validating.Validator {
-	optionalVars := cel.OptionalVariableDeclarations{HasAuthorizer: true, StrictCost: true}
-	expressionOptionalVars := cel.OptionalVariableDeclarations{StrictCost: true}
+	hasParams := policy.Spec.ParamKind != nil
+	optionalVars := cel.OptionalVariableDeclarations{HasParams: hasParams, HasAuthorizer: true, StrictCost: true}
+	expressionOptionalVars := cel.OptionalVariableDeclarations{HasParams: hasParams, StrictCost: true}
 	failurePolicy := policy.Spec.FailurePolicy
 
 	environmentSet := environment.MustBaseEnvSet(environment.DefaultCompatibilityVersion(), true)
