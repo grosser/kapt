@@ -263,6 +263,13 @@ items: []
 		})
 	})
 
+	It("fails on a document that is not an object", func() {
+		withFile("resources.yaml", "- a\n- b\n", func(path string) {
+			_, err := LoadResources(path)
+			Expect(err).To(MatchError(ContainSubstring(path + ": error unmarshaling JSON")))
+		})
+	})
+
 	It("fails without resources", func() {
 		withFile("resources.yaml", "# nothing here\n", func(path string) {
 			_, err := LoadResources(path)

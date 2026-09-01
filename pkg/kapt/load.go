@@ -175,9 +175,6 @@ func loadFile(path string) ([]*Resource, error) {
 		if err := utilyaml.Unmarshal(raw, document); err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		if document.GetKind() == "" {
-			continue // skip empty / comment-only documents
-		}
 		documents = append(documents, document)
 	}
 }
