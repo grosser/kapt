@@ -251,6 +251,25 @@ items: []
 		})
 	})
 
+	It("loads numbers larger than float64 in a JSON stream", func() {
+		largeNumber := strings.Repeat("9", 705)
+		small := `{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"a"},"data":{"value":1}}`
+		big := `{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"b"},"data":{"value":` + largeNumber + `}}`
+		withFile("resources.json", small+"\n"+small+"\n"+big+"\n", func(path string) {
+			resources, err := LoadResources(path)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resources).To(HaveLen(3))
+			Expect(resources[2].Object["data"].(map[string]any)["value"]).To(Equal(largeNumber))
+		})
+	})
+
+	It("fails on a document that is not an object", func() {
+		withFile("resources.yaml", "- a\n- b\n", func(path string) {
+			_, err := LoadResources(path)
+			Expect(err).To(MatchError(ContainSubstring(path + ": error unmarshaling JSON")))
+		})
+	})
+
 	It("fails without resources", func() {
 		withFile("resources.yaml", "# nothing here\n", func(path string) {
 			_, err := LoadResources(path)
