@@ -1,6 +1,7 @@
 package kapt
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -159,12 +160,19 @@ func loadFile(path string) ([]*Resource, error) {
 	documents := []*Resource{}
 	decoder := utilyaml.NewYAMLOrJSONDecoder(reader, 4096)
 	for {
-		document := &Resource{}
-		err = decoder.Decode(document)
+		raw := json.RawMessage{}
+		err = decoder.Decode(&raw)
 		if err == io.EOF {
 			return documents, nil
 		}
 		if err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+		if len(raw) == 0 {
+			continue // skip empty / comment-only documents
+		}
+		document := &Resource{}
+		if err := utilyaml.Unmarshal(raw, document); err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
 		if document.GetKind() == "" {
