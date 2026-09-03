@@ -94,6 +94,16 @@ verdict := policy.Validate(resources[0], kapt.DefaultOptions()).Verdict
 - Colors are used when stdout is a terminal, disable with `--no-color`
 - `kapt version` to see the current version
 
+## Why not [celtest](https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/apiserver/pkg/admission/testing/celtest)
+
+Upstream added a `celtest` package for testing admission CEL expressions ([PR](https://github.com/kubernetes/kubernetes/pull/138564), slated for k8s 1.38).
+kapt does not use it:
+
+- It recompiles the policy on every evaluation, kapt compiles once and validates thousands of resources
+- It compiles with `NewExpressions`, kapt uses `StoredExpressions` to match what the apiserver does at admission time
+- It only covers CEL expressions, kapt also handles bindings, `matchConstraints`, `namespaceSelector`, `paramRef` and namespace inventory
+- It targets go table tests, kapt is a YAML-in/verdict-out CLI
+
 ## TODO
 
 - support a policy without a binding via an extra flag
