@@ -44,6 +44,8 @@ Options:
   since a policy without a binding is ignored by the apiserver.
   To test multiple policies, loop: `for p in policies/*/rule.yaml; do kapt $p resources.yaml; done`
 - Resource files can hold multiple documents and `List`s, `-` reads stdin
+- All input files accept yaml or json (json = back to back objects like `kubectl get ... -o json`),
+  json parses faster, so prefer it for large inventories
 - Resources the policy does not select are reported as `SKIPPED` with the field that rejected them,
   prefixed by `matchConstraints` or `binding <name>`, `matchConditions` has no prefix since it is policy level
 

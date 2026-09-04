@@ -3,6 +3,7 @@
 package kapt
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -86,7 +87,9 @@ func run(options Options, policyPath string, resourcePaths []string, stdout, std
 	}
 
 	results := policy.ValidateAll(resources, options)
-	report(results, options, stdout)
+	buffered := bufio.NewWriter(stdout)
+	report(results, options, buffered)
+	_ = buffered.Flush() // report ignores write errors, so a broken pipe stays silent
 
 	code := 0
 	for _, result := range results {

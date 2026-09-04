@@ -4,7 +4,7 @@ all: build test
 
 BINARY = kapt
 $(BINARY): *.go pkg/kapt/*.go go.mod go.sum
-	go build -trimpath -o $(BINARY)
+	CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o $(BINARY) # match .github/workflows/release.yml
 
 .PHONY: build
 build: $(BINARY) ## Build binary

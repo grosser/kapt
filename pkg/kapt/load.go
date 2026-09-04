@@ -168,15 +168,21 @@ func loadFile(path string) ([]*Resource, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		if len(raw) == 0 {
-			continue // skip empty / comment-only documents
+		if isEmptyDocument(raw) { // skip empty / comment-only documents
+			continue
 		}
 		document := &Resource{}
-		if err := utilyaml.Unmarshal(raw, document); err != nil {
-			return nil, fmt.Errorf("%s: %w", path, err)
+		if err := document.UnmarshalJSON(raw); err != nil {
+			return nil, fmt.Errorf("%s: error unmarshaling JSON: %w", path, err)
 		}
 		documents = append(documents, document)
 	}
+}
+
+// isEmptyDocument reports documents without content, which are empty or
+// come out as null after yaml to json conversion (for example comment-only documents)
+func isEmptyDocument(raw json.RawMessage) bool {
+	return len(raw) == 0 || string(raw) == "null"
 }
 
 func open(path string) (io.ReadCloser, error) {
