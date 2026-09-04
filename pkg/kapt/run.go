@@ -3,13 +3,14 @@
 package kapt
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
+
+	flag "github.com/spf13/pflag"
 )
 
 const Version = "v0.4.1"
@@ -44,7 +45,9 @@ func DefaultOptions() Options {
 func Run(argv []string, stdout io.Writer, stderr io.Writer) int {
 	set, options, groups, noColor := newFlagSet(stderr)
 	if err := set.Parse(argv); err != nil {
-		return 2 // flag package already printed the error and usage
+		fmt.Fprintf(stderr, "kapt: %v\n", err) // pflag ContinueOnError returns the error without printing
+		set.Usage()
+		return 2
 	}
 	options.Groups = splitWithoutEmpty(*groups, ',')
 	options.Color = isTerminal(stdout) && !*noColor

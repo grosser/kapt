@@ -11,8 +11,17 @@ var _ = Describe("kapt", func() {
 	Describe("main", func() {
 		It("validates", func() {
 			code, stdout := runMain(
-				"-inventory", "pkg/kapt/testdata/namespaces.yaml",
+				"--inventory", "pkg/kapt/testdata/namespaces.yaml",
 				"pkg/kapt/testdata/policy.yaml", "pkg/kapt/testdata/resources.yaml",
+			)
+			Expect(stdout).To(ContainSubstring("batch/v1/Job apps/bad DENIED"))
+			Expect(code).To(Equal(1))
+		})
+
+		It("validates with flags after positional args", func() {
+			code, stdout := runMain(
+				"pkg/kapt/testdata/policy.yaml", "pkg/kapt/testdata/resources.yaml",
+				"--inventory", "pkg/kapt/testdata/namespaces.yaml",
 			)
 			Expect(stdout).To(ContainSubstring("batch/v1/Job apps/bad DENIED"))
 			Expect(code).To(Equal(1))

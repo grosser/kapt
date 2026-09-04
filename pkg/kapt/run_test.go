@@ -29,7 +29,7 @@ var _ = Describe("Run", func() {
 
 	It("reads multiple files and stdin", func() {
 		withStdin(job("piped", "apps"), func() {
-			code, stdout, _ := runKapt("-inventory", namespacesPath, policyPath, resourcesPath, "-")
+			code, stdout, _ := runKapt("--inventory", namespacesPath, policyPath, resourcesPath, "-")
 			Expect(stdout).To(ContainSubstring("apps/bad DENIED"))
 			Expect(stdout).To(ContainSubstring("apps/piped DENIED"))
 			Expect(code).To(Equal(1))
@@ -37,7 +37,7 @@ var _ = Describe("Run", func() {
 	})
 
 	It("prints json", func() {
-		code, stdout, _ := runKapt("-json", "-inventory", namespacesPath, policyPath, resourcesPath)
+		code, stdout, _ := runKapt("--json", "--inventory", namespacesPath, policyPath, resourcesPath)
 		Expect(stdout).To(Equal(
 			`[{"apiVersion":"batch/v1","kind":"Job","namespace":"apps","name":"bad","verdict":"denied",` +
 				`"message":"Do not set backoffLimit > 10 on bad"},` +
@@ -49,7 +49,7 @@ var _ = Describe("Run", func() {
 
 	It("honors namespaceSelector when given an inventory", func() {
 		withFile("job.yaml", job("bad", "disabled"), func(path string) {
-			code, stdout, stderr := runKapt("-inventory", namespacesPath, policyPath, path)
+			code, stdout, stderr := runKapt("--inventory", namespacesPath, policyPath, path)
 			Expect(stdout).To(Equal(
 				"batch/v1/Job disabled/bad SKIPPED binding job-backoff-limit.example.com namespaceSelector\n"))
 			Expect(stderr).To(Equal(""))
@@ -66,8 +66,8 @@ var _ = Describe("Run", func() {
 	})
 
 	It("exits 2 on unknown flag", func() {
-		code, _, stderr := runKapt("-nope", policyPath, resourcesPath)
-		Expect(stderr).To(ContainSubstring("flag provided but not defined"))
+		code, _, stderr := runKapt("--nope", policyPath, resourcesPath)
+		Expect(stderr).To(ContainSubstring("unknown flag: --nope"))
 		Expect(code).To(Equal(2))
 	})
 
@@ -78,7 +78,7 @@ var _ = Describe("Run", func() {
 	})
 
 	It("exits 2 when the inventory cannot be read", func() {
-		code, _, stderr := runKapt("-inventory", "testdata/missing.yaml", policyPath, resourcesPath)
+		code, _, stderr := runKapt("--inventory", "testdata/missing.yaml", policyPath, resourcesPath)
 		Expect(stderr).To(ContainSubstring("kapt: open testdata/missing.yaml"))
 		Expect(code).To(Equal(2))
 	})
@@ -102,7 +102,7 @@ var _ = Describe("Run", func() {
 		spec := "  validations: [{expression: \"request.userInfo.username == 'me' && " +
 			"request.userInfo.groups == ['a', 'b']\"}]"
 		withPolicy(spec, job("bad", "apps"), func(policy string, resource string) {
-			code, stdout, _ := runKapt("-user", "me", "-groups", "a,b,,", policy, resource)
+			code, stdout, _ := runKapt("--user", "me", "--groups", "a,b,,", policy, resource)
 			Expect(stdout).To(ContainSubstring("ALLOWED"))
 			Expect(code).To(Equal(0))
 		})

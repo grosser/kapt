@@ -5,6 +5,7 @@ go 1.26 // keep in sync with lowest supported version in .github/workflows/test.
 require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.42.1
+	github.com/spf13/pflag v1.0.6
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
 	k8s.io/apiserver v0.34.1
@@ -48,7 +49,6 @@ require (
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
