@@ -96,7 +96,9 @@ verdict := policy.Validate(resources[0], kapt.DefaultOptions()).Verdict
 - Colors are used when stdout is a terminal, disable with `--no-color`
 - `kapt version` to see the current version
 
-## Why not [celtest](https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/apiserver/pkg/admission/testing/celtest)
+## Alternatives
+
+### Why not [celtest](https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/apiserver/pkg/admission/testing/celtest)
 
 Upstream added a `celtest` package for testing admission CEL expressions ([PR](https://github.com/kubernetes/kubernetes/pull/138564), slated for k8s 1.38).
 kapt does not use it:
@@ -105,6 +107,40 @@ kapt does not use it:
 - It compiles with `NewExpressions`, kapt uses `StoredExpressions` to match what the apiserver does at admission time
 - It only covers CEL expressions, kapt also handles bindings, `matchConstraints`, `namespaceSelector`, `paramRef` and namespace inventory
 - It targets go table tests, kapt is a YAML-in/verdict-out CLI
+
+### Why not [gator](https://open-policy-agent.github.io/gatekeeper/website/gator/)
+
+gator is Gatekeeper's test CLI, built for opa-gatekeeper `ConstraintTemplate`s, which convert to `ValidatingAdmissionPolicy`
+
+- VAP is wrapped in a `ConstraintTemplate` with `engine: K8sNativeValidation` and the binding in a `Constraint`
+  (paramKind/paramRef becomes constraint `parameters`, messageExpression params change shape)
+  which hides bugs and adds indirection
+- Mistakes are silent: nesting the CEL under `source.spec` (the shape a VAP suggests) is accepted without error
+  but evaluates nothing, and `params` is the whole Constraint object and only usable via a `source.variables`
+  indirection, so a VAP's `params.data.help` becomes `variables.x` over `params.spec.parameters.help` —
+  get either wrong and there is no error, just a generic "failed expression" message or zero violations
+- The driver warns about itself: "This is a PROTOTYPE driver. Do not use this for any critical work"
+  ([driver.go](https://github.com/open-policy-agent/gatekeeper/blob/master/pkg/drivers/k8scel/driver.go))
+- It is slower
+
+Benchmark: same policy logic (`!has(object.spec.externalIPs)` with a namespaceSelector over a 1506 namespace inventory), json inputs, violation counts verified non-zero with an injected bad resource:
+
+| workload                | kapt | gator 3.23.1 |
+|-------------------------|---|---|
+| 1656 Services (9MB)     | 0.15s (0.24s cpu, 148MB) | 0.38s (0.54s cpu, 141MB) |
+| 2229 Deployments (85MB) | 0.76s (0.85s cpu, 576MB) | 1.59s (2.40s cpu, 706MB) |
+
+(wall time, cpu time, peak memory)
+
+```bash
+# kapt: the exact policy + binding files that get applied to the cluster
+kapt --inventory namespaces.json policy.yaml services.json
+
+# gator: CEL re-wrapped in a ConstraintTemplate + Constraint, Lists pre-expanded to a json stream
+gator test -f services-stream.json -f namespaces-stream.json -f template.yaml -f constraint.yaml </dev/null
+```
+
+(`</dev/null` because gator blocks on stdin even when `-f` is given)
 
 ## TODO
 
