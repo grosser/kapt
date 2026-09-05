@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+# Release a new version: bump version in all known spots, commit, tag, and create a github release.
+# Usage: bin/release v0.4.2
+require "open3"
+
+VERSION = /\Av\d+\.\d+\.\d+\z/
+FILES = ["README.md", "pkg/kapt/run.go"]
+
+def sh(*cmd)
+  puts "+ #{cmd.join(" ")}"
+  out, status = Open3.capture2e(*cmd)
+  abort out unless status.success?
+  out
+end
+
+new_version = ARGV[0]
+abort "Usage: bin/release vX.Y.Z" if ARGV.size != 1 || !new_version.match?(VERSION)
+
+# fail on dirty tree so the release commit only contains the version bump
+dirty = sh("git", "status", "--porcelain")
+abort "Working tree is not clean:\n#{dirty}" unless dirty.empty?
+
+current = File.read("pkg/kapt/run.go")[/const Version = "(v\d+\.\d+\.\d+)"/, 1]
+abort "Could not find current version in pkg/kapt/run.go" unless current
+abort "Major version must not change (#{current} -> #{new_version}), that requires a /v2 path" if current.split(".").first != new_version.split(".").first
+abort "#{new_version} is not greater than #{current}" unless Gem::Version.new(new_version.delete_prefix("v")) > Gem::Version.new(current.delete_prefix("v"))
+
+# replace old version everywhere, failing if any occurrence is left behind
+FILES.each do |file|
+  count = 0
+  updated = File.read(file).gsub(current) { count += 1; new_version }
+  abort "No occurrence of #{current} found in #{file}" if count == 0
+  File.write(file, updated)
+end
+puts "Replaced all occurrences of #{current} with #{new_version}"
+
+sh("git", "add", *FILES)
+sh("git", "commit", "-m", new_version)
+sh("git", "push")
+sh("git", "tag", new_version)
+sh("git", "push", "origin", new_version)
+sh("gh", "release", "create", new_version, "--generate-notes", "--title", new_version)

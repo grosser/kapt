@@ -179,11 +179,7 @@ make # build and test with 100% coverage enforcement
 
 ## Release
 
-- never release a major version unless absolutely necessary, since that requires a /v2 path
-- make new version commit that changes `pkg/kapt/run.go` and every version in the readme
-  (download url + "Makefile setup"), `grep -rEn 'v[0-9]+\.[0-9]+\.[0-9]+' README.md pkg` to find them
-- push and tag the commit
-- create a github release for the tag, which builds and attaches the binaries
+`./bin/release v<VERSION>`
 
 ## Author
 
