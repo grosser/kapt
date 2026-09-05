@@ -96,6 +96,28 @@ verdict := policy.Validate(resources[0], kapt.DefaultOptions()).Verdict
 - Colors are used when stdout is a terminal, disable with `--no-color`
 - `kapt version` to see the current version
 
+## Makefile setup to use a consistent version of kapt
+
+```
+.PHONY: test-policies
+test-policies: kapt
+	$(KAPT) policy.yaml resources.yaml
+
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+KAPT ?= $(LOCALBIN)/kapt
+KAPT_VERSION ?= v0.4.1
+KAPT_PLATFORM ?= $(shell uname -s | tr A-Z a-z)-$(shell uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/)
+KAPT_URL ?= https://github.com/grosser/kapt/releases/download/$(KAPT_VERSION)/kapt-$(KAPT_VERSION)-$(KAPT_PLATFORM).tar.gz
+
+.PHONY: kapt
+kapt: $(LOCALBIN) # Download kapt (replace existing if incorrect version)
+	@(test -f $(KAPT) && $(KAPT) version | grep "$(KAPT_VERSION)" >/dev/null) || \
+	(rm -f $(KAPT) && echo "Installing $(KAPT) $(KAPT_VERSION)" && \
+	curl -sSfL --retry 3 $(KAPT_URL) | tar -zx -C $(LOCALBIN) && chmod +x $(KAPT))
+```
+
 ## Alternatives
 
 ### Why not [celtest](https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/apiserver/pkg/admission/testing/celtest)
@@ -148,28 +170,6 @@ gator test -f services-stream.json -f namespaces-stream.json -f template.yaml -f
 - validate multiple policies in one run, parsing the resources only once
 - support `MutatingAdmissionPolicy`
 - support `UPDATE` requests with `oldObject`
-
-## Makefile setup to use a consistent version of kapt
-
-```
-.PHONY: test-policies
-test-policies: kapt
-	$(KAPT) policy.yaml resources.yaml
-
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-KAPT ?= $(LOCALBIN)/kapt
-KAPT_VERSION ?= v0.4.1
-KAPT_PLATFORM ?= $(shell uname -s | tr A-Z a-z)-$(shell uname -m | sed -e s/x86_64/amd64/ -e s/aarch64/arm64/)
-KAPT_URL ?= https://github.com/grosser/kapt/releases/download/$(KAPT_VERSION)/kapt-$(KAPT_VERSION)-$(KAPT_PLATFORM).tar.gz
-
-.PHONY: kapt
-kapt: $(LOCALBIN) # Download kapt (replace existing if incorrect version)
-	@(test -f $(KAPT) && $(KAPT) version | grep "$(KAPT_VERSION)" >/dev/null) || \
-	(rm -f $(KAPT) && echo "Installing $(KAPT) $(KAPT_VERSION)" && \
-	curl -sSfL --retry 3 $(KAPT_URL) | tar -zx -C $(LOCALBIN) && chmod +x $(KAPT))
-```
 
 ## Development
 
