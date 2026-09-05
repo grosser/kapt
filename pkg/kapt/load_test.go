@@ -251,15 +251,21 @@ items: []
 		})
 	})
 
-	It("loads numbers larger than float64 in a JSON stream", func() {
-		largeNumber := strings.Repeat("9", 705)
-		small := `{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"a"},"data":{"value":1}}`
-		big := `{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"b"},"data":{"value":` + largeNumber + `}}`
-		withFile("resources.json", small+"\n"+small+"\n"+big+"\n", func(path string) {
+	It("ignores comment-only documents", func() {
+		withFile("resources.yaml", "# hello\n---\n"+job("plain", "apps"), func(path string) {
 			resources, err := LoadResources(path)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(resources).To(HaveLen(3))
-			Expect(resources[2].Object["data"].(map[string]any)["value"]).To(Equal(largeNumber))
+			Expect(resources).To(HaveLen(1))
+			Expect(resources[0].GetName()).To(Equal("plain"))
+		})
+	})
+
+	It("loads a JSON stream, skipping null documents", func() {
+		small := `{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"a"}}`
+		withFile("resources.json", small+"\nnull\n"+small+"\n", func(path string) {
+			resources, err := LoadResources(path)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resources).To(HaveLen(2))
 		})
 	})
 

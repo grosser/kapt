@@ -15,6 +15,7 @@ jobs:
     name: ${{ matrix.os }} ${{ matrix.arch }}
     steps:
     - uses: actions/checkout@v4
+    # matches Makefile build
     - name: compile and release
       uses: wangyoucao577/go-release-action@v1.55
       env:
