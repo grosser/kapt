@@ -14,7 +14,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-const Version = "v0.4.1"
+const Version = "v0.5.0"
 
 const usage = `Usage: kapt [options] <policy.yaml> <resource.yaml>...
 
